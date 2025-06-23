@@ -35,12 +35,10 @@
         var: python_install_result.stdout_lines
       when: python_install_result is defined
 
-    # ✅ SET FACT to update Python interpreter path
     - name: Set Python 3.8 as interpreter for RedHat hosts
       set_fact:
         ansible_python_interpreter: /usr/bin/python3.8
 
-    # ✅ RESET SSH CONNECTION to apply the new interpreter
     - name: Reset SSH connection to apply new interpreter
       meta: reset_connection
 
@@ -48,6 +46,8 @@
 - name: Common OS Configuration
   hosts: all
   become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
 
   roles:
     - common
@@ -56,6 +56,8 @@
 - name: Configure Frontend
   hosts: frontend
   become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
 
   roles:
     - frontend
@@ -64,6 +66,8 @@
 - name: Configure Backend
   hosts: backend
   become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
 
   roles:
     - backend

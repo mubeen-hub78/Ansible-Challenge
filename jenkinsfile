@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        AWS_ACCESS_KEY_ID = credentials('AWS-ROOT') # Ensure 'AWS-ROOT' is the correct ID for your AWS credentials in Jenkins
+        AWS_ACCESS_KEY_ID = credentials('AWS-ROOT')
         AWS_SECRET_ACCESS_KEY = credentials('AWS-ROOT')
     }
 
@@ -32,7 +32,6 @@ pipeline {
         stage('Generate Ansible Inventory') {
             steps {
                 dir('terraform') {
-                    # This command creates the inventory.ini file in the ansible directory
                     sh 'terraform output -raw inventory > ../ansible/inventory.ini'
                 }
             }
@@ -41,11 +40,8 @@ pipeline {
         stage('Run Ansible Playbook') {
             steps {
                 dir('ansible') {
-                    sshagent (credentials: ['ubuntu']) { // Ensure 'ubuntu' is the correct ID for your SSH private key credential in Jenkins
+                    sshagent (credentials: ['ubuntu']) {
                         sh '''
-                        # Run the entire unified playbook.yml in a single command.
-                        # The Python bootstrapping play for RedHat will run first,
-                        # then meta: clear_facts will force Ansible to re-evaluate the interpreter.
                         ansible-playbook -i inventory.ini playbook.yml --ssh-extra-args="-o StrictHostKeyChecking=no"
                         '''
                     }

@@ -7,7 +7,6 @@
       ansible.builtin.command: sudo amazon-linux-extras enable python3.8
       args:
         warn: false # Suppress warning about command module not being idempotent
-      # This command is largely idempotent. If it's already enabled, it usually does nothing.
 
     - name: Install Python 3.8 package on RedHat (Amazon Linux 2 specific)
       become: true

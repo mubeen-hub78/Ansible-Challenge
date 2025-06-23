@@ -1,17 +1,23 @@
-# ansible/roles/common/tasks/main.yml
-
-- name: Disable SELinux (RedHat-like systems)
-  selinux:
+---
+# Disable SELinux only for RedHat systems excluding Amazon Linux
+- name: Disable SELinux (RedHat-like systems excluding Amazon Linux)
+  ansible.posix.selinux:
     state: disabled
-  when: ansible_os_family == "RedHat"
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution != "Amazon"
 
-- name: Disable firewalld (RedHat-like systems)
+# Disable firewalld only for RedHat systems excluding Amazon Linux
+- name: Disable firewalld (RedHat-like systems excluding Amazon Linux)
   service:
     name: firewalld
     state: stopped
     enabled: no
-  when: ansible_os_family == "RedHat"
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution != "Amazon"
 
+# Disable UFW only for Debian-based systems
 - name: Disable UFW (Debian-like systems)
   service:
     name: ufw

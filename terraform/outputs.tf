@@ -1,14 +1,4 @@
-# terraform/outputs.tf
-
-output "frontend_ip" {
-  description = "Public IP address of the frontend server"
-  value       = aws_instance.frontend.public_ip
-}
-
-output "backend_ip" {
-  description = "Public IP address of the backend server"
-  value       = aws_instance.backend.public_ip
-}
+# terraform/outputs.tf - Only define outputs here that are NOT in main.tf
 
 output "inventory" {
   description = "Ansible inventory for the deployed instances"

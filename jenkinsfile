@@ -40,8 +40,21 @@ pipeline {
         stage('Run Ansible Playbook') {
             steps {
                 dir('ansible') {
-                    sshagent (credentials: ['Ubuntu']) { // Correct use of sshagent
-                        sh 'ansible-playbook -i inventory.ini playbook.yml --ssh-extra-args="-o StrictHostKeyChecking=no"'
+                    sshagent (credentials: ['Ubuntu']) { // Ensure this is the correct ID for your SSH key credential
+                        sh '''
+                        # First, run ONLY the Python bootstrapping play on RedHat hosts
+                        ansible-playbook -i inventory.ini playbook.yml \\
+                                         --limit redhat_hosts \\
+                                         --tags "python_bootstrap" \\
+                                         --ssh-extra-args="-o StrictHostKeyChecking=no"
+
+                        # Now, run the rest of the playbook on all hosts.
+                        # Ansible will now correctly pick up Python 3.8 on c8.local
+                        # and Python 3.12 on u21.local (via /usr/bin/python3)
+                        ansible-playbook -i inventory.ini playbook.yml \\
+                                         --skip-tags "python_bootstrap" \\
+                                         --ssh-extra-args="-o StrictHostKeyChecking=no"
+                        '''
                     }
                 }
             }

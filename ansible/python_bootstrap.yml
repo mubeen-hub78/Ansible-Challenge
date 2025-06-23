@@ -1,0 +1,52 @@
+- name: Python Bootstrapping for RedHat-like systems
+  hosts: redhat_hosts
+  gather_facts: false # Do not gather facts before python is ready
+  tasks:
+    - name: Ensure Python 3.8 repository is enabled (Amazon Linux 2 specific)
+      become: true
+      ansible.builtin.command: sudo amazon-linux-extras enable python3.8
+      args:
+        warn: false # Suppress warning about command module not being idempotent
+      # This command is largely idempotent. If it's already enabled, it usually does nothing.
+
+    - name: Install Python 3.8 package on RedHat (Amazon Linux 2 specific)
+      become: true
+      ansible.builtin.yum:
+        name: python38
+        state: present
+        update_cache: true
+
+    - name: Ensure /usr/bin/python3 symlinks to /usr/bin/python3.8 for Ansible
+      become: true
+      ansible.builtin.alternatives:
+        name: python3 # The generic name to set
+        link: /usr/bin/python3 # The symlink path
+        path: /usr/bin/python3.8 # The actual binary path
+        priority: 100 # A higher priority to ensure it's picked as default
+
+    - name: Verify Python 3.8 is the default python3 now
+      ansible.builtin.command: python3 --version
+      register: python3_version_check
+      changed_when: false
+      failed_when: "'Python 3.8' not in python3_version_check.stdout"
+
+    - name: Debug verified python3 version
+      ansible.builtin.debug:
+        var: python3_version_check.stdout
+
+    - name: Clear cached facts to force Python interpreter re-evaluation
+      ansible.builtin.meta: clear_facts
+
+- name: Python Bootstrapping for Debian-like systems
+  hosts: debian_hosts
+  gather_facts: false # Do not gather facts before python is ready
+  tasks:
+    - name: Ensure Python 3 is installed (Debian/Ubuntu)
+      become: true
+      ansible.builtin.apt:
+        name: python3
+        state: present
+        update_cache: true
+
+    - name: Clear cached facts to force Python interpreter re-evaluation
+      ansible.builtin.meta: clear_facts

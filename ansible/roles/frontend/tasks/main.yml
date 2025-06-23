@@ -1,20 +1,15 @@
----
-# Install Nginx on Amazon Linux 2
 - name: Install Nginx on Amazon Linux 2
   yum:
     name: nginx
     state: present
   when: ansible_distribution == "Amazon"
 
-# Install Nginx on Debian-based systems
-- name: Install Nginx on Debian-based systems
-  apt:
+- name: Install Nginx on other RedHat systems
+  dnf:
     name: nginx
     state: present
-    update_cache: yes
-  when: ansible_os_family == "Debian"
+  when: ansible_distribution != "Amazon" and ansible_os_family == "RedHat"
 
-# Configure Nginx Proxy to Backend
 - name: Configure Nginx Proxy to Backend
   copy:
     dest: /etc/nginx/conf.d/proxy.conf
@@ -31,7 +26,6 @@
           }
       }
 
-# Ensure Nginx is running and enabled
 - name: Ensure Nginx is running and enabled
   service:
     name: nginx

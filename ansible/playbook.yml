@@ -38,13 +38,15 @@
   hosts: backend
   become: true
   tasks:
-    - name: Allow Netdata to listen on all IP addresses inside [web] section
+    - name: Ensure Netdata binds to all IP addresses
       blockinfile:
         path: /etc/netdata/netdata.conf
-        marker: ""
-        insertafter: '^\[web\]'
         block: |
-          bind to = 0.0.0.0
+          [web]
+            bind to = 0.0.0.0
+        marker: ""
+        insertafter: EOF
+        backup: yes
 
     - name: Restart Netdata service
       service:

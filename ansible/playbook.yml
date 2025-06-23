@@ -1,22 +1,24 @@
 ---
-# playbook.yml - Optimized Ansible Playbook
+# ansible/playbook.yml - Main Ansible Playbook for CI/CD Challenge
 
-# Play 1: Ensure Python 3.8 is available for Ansible on RedHat-like systems (e.g., Amazon Linux 2)
-# This play must run FIRST and ONLY targets 'redhat_hosts' because its default Python 3 is too old.
-- name: Ensure Python 3.8 is available for Ansible on RedHat-like systems
-  hosts: redhat_hosts
-  become: true # Needed for package installation and system-wide symlinks
-  gather_facts: false # Essential: do not gather facts before Python interpreter is properly set up
+# Play 1: Python Bootstrapping for RedHat-like systems (Amazon Linux 2)
+# This play ensures Python 3.8 is installed and active on c8.local
+# It uses 'raw' as the Python interpreter might not be ready for standard modules yet.
+- name: Python Bootstrapping for RedHat-like systems
+  hosts: redhat_hosts # Target only Amazon Linux 2 (c8.local)
+  become: true        # Required for yum/amazon-linux-extras
+  gather_facts: false # Do not gather facts yet, as Python might not be fully configured
+
   tasks:
-    - name: Install Python 3.8 on RedHat (c8.local) if needed
-      # Use raw module because Python 3.8 might not be the default interpreter yet,
-      # and the initial connection might use Python 2.7
+    - name: Install Python 3.8 on RedHat (c8.local) via amazon-linux-extras
       raw: |
-        echo "Checking Python 3.8 on RedHat-like system (Amazon Linux 2 specific)..."
+        echo "Starting Python 3.8 installation on RedHat-like system (Amazon Linux 2 specific)..."
         # Check if python3.8 exists and if its minor version is less than 8
         if ! command -v /usr/bin/python3.8 &> /dev/null || [ "$(/usr/bin/python3.8 -c 'import sys; print(sys.version_info[1])' 2>/dev/null || echo 0)" -lt 8 ]; then
           echo "Python 3.8 not found or too old, installing via amazon-linux-extras..."
+          # Update system first (optional, but good practice)
           sudo yum update -y || echo "Yum update failed, but continuing for Python install."
+          # Install Python 3.8 via amazon-linux-extras
           sudo amazon-linux-extras install -y python3.8
           echo "amazon-linux-extras install output: $?"
         else
@@ -30,41 +32,57 @@
             echo "ERROR: /usr/bin/python3.8 was not found after installation attempt. This is critical. Exiting raw task with error."
             exit 1 # Force an error if Python 3.8 was not installed correctly
         fi
-      register: python_install_result
+      register: python_install_result # Capture output for debugging
+      # Fail if the raw command itself returned a non-zero exit code, or if Python 3.8 was not found.
       failed_when: "python_install_result.rc != 0 or 'ERROR: /usr/bin/python3.8 was not found' in python_install_result.stdout"
 
     - name: Debug RedHat Python install output
       debug:
         var: python_install_result.stdout_lines
-      when: python_install_result is defined
+      when: python_install_result is defined # Only show debug if the raw task was attempted
 
+    # IMPORTANT: Clear facts to force Ansible to re-evaluate the Python interpreter
+    # for subsequent plays within the same run.
+    - name: Clear cached facts to force Python interpreter re-evaluation
+      meta: clear_facts
 
-# The "Ensure Python 3.8 on Debian-like systems" play is removed entirely.
-# /usr/bin/python3 on Ubuntu 24.04 (Python 3.12) is sufficient and is set in outputs.tf.
-
-
-# Play 2: Common OS Configuration
-# This play and subsequent ones will run AFTER Python 3.8 is ensured on RedHat hosts
-# and Python 3.12 (as /usr/bin/python3) is available on Debian hosts.
+# Play 2: Common OS Configuration for All VMs
+# This play will run AFTER Python 3.8 is ensured on RedHat hosts, and Python 3.x
+# is already available on Debian hosts. Ansible will now use /usr/bin/python3.8 on RedHat.
 - name: Common OS Configuration
   hosts: all
   become: true
-  # Explicitly set python interpreter for all hosts to /usr/bin/python3
-  # This will use python3.8 on RedHat (after installation) and python3.12 on Debian.
   vars:
-    ansible_python_interpreter: /usr/bin/python3
+    # This variable is crucial. It ensures Ansible uses the correct Python interpreter
+    # after the bootstrapping step. It will use python3.8 on RedHat (now installed)
+    # and python3 on Debian (which is python3.12+).
+    ansible_python_interpreter: /usr/bin/python3 # Use /usr/bin/python3 for consistency
+
   roles:
     - common # Assuming you have a 'common' role in roles/common
-
 
 # Play 3: Configure Frontend Servers (Nginx)
 - name: Configure Frontend
   hosts: frontend
   become: true
   vars:
-    ansible_python_interpreter: /usr/bin/python3 # This will use python3.8 on RedHat
+    ansible_python_interpreter: /usr/bin/python3 # Will use Python 3.8 on c8.local
   roles:
     - frontend # Assuming you have a 'frontend' role in roles/frontend
+      # Your frontend role should:
+      # - Install Nginx
+      # - Configure Nginx to proxy port 80 to backend_ip:19999
+      # Example Nginx config snippet (in your role's templates/nginx.conf.j2):
+      # server {
+      #     listen 80;
+      #     location / {
+      #         proxy_pass http://{{ groups['backend'][0] }}:19999; # Assumes one backend, adjust if more
+      #         proxy_set_header Host $host;
+      #         proxy_set_header X-Real-IP $remote_addr;
+      #         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      #         proxy_set_header X-Forwarded-Proto $scheme;
+      #     }
+      # }
 
 
 # Play 4: Configure Backend Servers (Netdata)
@@ -72,6 +90,24 @@
   hosts: backend
   become: true
   vars:
-    ansible_python_interpreter: /usr/bin/python3 # This will use python3.12 on Debian
+    ansible_python_interpreter: /usr/bin/python3 # Will use Python 3.12+ on u21.local
   roles:
     - backend # Assuming you have a 'backend' role in roles/backend
+      # Your backend role should:
+      # - Install Netdata from official repositories (e.g., using apt/yum module)
+      # - Ensure Netdata service is running on port 19999
+      # - Example:
+      #   - name: Install Netdata
+      #     apt: name=netdata state=present update_cache=yes # For Debian/Ubuntu
+      #   - name: Ensure Netdata is running and enabled
+      #     systemd: name=netdata state=started enabled=yes
+      #   - name: Set Netdata listen port (Netdata default is usually 19999, but explicit is good)
+      #     lineinfile:
+      #       path: /etc/netdata/netdata.conf
+      #       regexp: '^#\s*bind to = 127.0.0.1'
+      #       line: '  bind to = 0.0.0.0' # Or your specific IP, but 0.0.0.0 listens everywhere
+      #       backup: yes
+      #     notify: Restart netdata
+      # Handlers (in your role's handlers/main.yml):
+      # - name: Restart netdata
+      #   systemd: name=netdata state=restarted

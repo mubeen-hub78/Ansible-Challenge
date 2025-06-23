@@ -1,0 +1,18 @@
+- name: Disable SELinux
+  selinux:
+    state: disabled
+  when: ansible_os_family == "RedHat"
+
+- name: Disable firewalld
+  service:
+    name: firewalld
+    state: stopped
+    enabled: no
+  when: ansible_os_family == "RedHat"
+
+- name: Disable UFW (for Ubuntu)
+  service:
+    name: ufw
+    state: stopped
+    enabled: no
+  when: ansible_os_family == "Debian"

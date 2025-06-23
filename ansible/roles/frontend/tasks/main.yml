@@ -1,0 +1,16 @@
+---
+- name: Enable nginx using amazon-linux-extras
+  shell: amazon-linux-extras enable nginx1
+
+- name: Clean yum metadata
+  shell: yum clean metadata
+
+- name: Install Nginx using shell command
+  shell: yum install -y nginx
+
+- name: Start and enable Nginx
+  systemd:
+    name: nginx
+    state: started
+    enabled: true
+- include_tasks: reverse_proxy.yml

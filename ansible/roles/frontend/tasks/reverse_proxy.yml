@@ -1,0 +1,14 @@
+- name: Add reverse proxy config for Netdata
+  copy:
+    dest: /etc/nginx/conf.d/netdata_proxy.conf
+    content: |
+      server {
+          listen 80;
+
+          location / {
+              proxy_pass http://{{ hostvars['u21.local']['ansible_host'] }}:19999;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+          }
+      }
+  notify: restart nginx

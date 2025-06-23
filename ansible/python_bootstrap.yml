@@ -1,0 +1,22 @@
+- name: Python Bootstrapping for RedHat-like systems
+  hosts: redhat_hosts
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Install Python 3.8 on RedHat (c8.local) via amazon-linux-extras
+      raw: |
+        sudo amazon-linux-extras enable python3.8
+        sudo yum clean metadata
+        sudo yum install -y python3.8
+      register: python_install_result
+
+    - name: Debug RedHat Python install output
+      debug:
+        var: python_install_result.stdout_lines
+
+    - name: Set Python 3.8 as interpreter for RedHat hosts
+      set_fact:
+        ansible_python_interpreter: /usr/bin/python3.8
+
+    - name: Reset SSH connection to apply new interpreter
+      meta: reset_connection

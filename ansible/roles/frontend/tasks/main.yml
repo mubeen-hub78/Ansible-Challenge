@@ -1,4 +1,5 @@
-- name: Enable Nginx in Amazon Linux 2
+---
+- name: Enable nginx using amazon-linux-extras
   command: amazon-linux-extras enable nginx1
 
 - name: Clean yum metadata
@@ -9,24 +10,8 @@
     name: nginx
     state: present
 
-- name: Configure Nginx Proxy to Backend
-  copy:
-    dest: /etc/nginx/conf.d/proxy.conf
-    content: |
-      server {
-          listen 80;
-
-          location / {
-              proxy_pass http://{{ groups['backend'][0] }}:19999/;
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_set_header X-Forwarded-Proto $scheme;
-          }
-      }
-
-- name: Ensure Nginx is running and enabled
-  service:
+- name: Start and enable nginx
+  systemd:
     name: nginx
     state: started
-    enabled: yes
+    enabled: true

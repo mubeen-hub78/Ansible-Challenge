@@ -1,14 +1,24 @@
-# terraform/outputs.tf - Only define outputs here that are NOT in main.tf
+# terraform/outputs.tf
+
+output "frontend_ip" {
+  description = "Public IP address of the frontend server"
+  value       = aws_instance.frontend.public_ip
+}
+
+output "backend_ip" {
+  description = "Public IP address of the backend server"
+  value       = aws_instance.backend.public_ip
+}
 
 output "inventory" {
   description = "Ansible inventory for the deployed instances"
   value = <<EOT
 [frontend]
-# Remove ansible_python_interpreter for c8.local so it defaults to Python 2 for initial raw commands
-c8.local ansible_host=${aws_instance.frontend.public_ip} ansible_user=ec2-user
+# Explicitly tell Ansible to use Python 3.8 for c8.local, as this will be installed.
+c8.local ansible_host=${aws_instance.frontend.public_ip} ansible_user=ec2-user ansible_python_interpreter=/usr/bin/python3.8
 
 [backend]
-# Keep ansible_python_interpreter for u21.local as its Python 3.12 is sufficient
+# Ubuntu's /usr/bin/python3 (e.g., Python 3.12 for 24.04) is sufficient.
 u21.local ansible_host=${aws_instance.backend.public_ip} ansible_user=ubuntu ansible_python_interpreter=/usr/bin/python3
 
 [redhat_hosts]

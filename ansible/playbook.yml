@@ -1,69 +1,17 @@
-# --- Python Bootstrapping Plays (from previous steps) ---
-- name: Ensure Python 3.8 is available for Ansible on RedHat-like systems
-  hosts: redhat_hosts
-  become: true
-  gather_facts: false
-  tasks:
-    - name: Install Python 3.8 and set as default on RedHat (c8.local)
-      raw: |
-        # Check if python3.8 exists and if its minor version is less than 8
-        if ! command -v python3.8 &> /dev/null || [ "$(python3.8 -c 'import sys; print(sys.version_info[1])' 2>/dev/null || echo 0)" -lt 8 ]; then
-          sudo yum install -y python38
-        fi
-        # Try to ensure /usr/bin/python is a symlink to python3.8
-        if [ -f /usr/bin/python3.8 ]; then
-            # Attempt to set it via alternatives
-            sudo alternatives --install /usr/bin/python python /usr/bin/python3.8 100 --force
-            # Also create a direct symlink as a fallback, as alternatives can be tricky
-            sudo ln -sf /usr/bin/python3.8 /usr/bin/python
-        fi
-      register: python_install_result
-      failed_when: "'No packages marked for update' not in python_install_result.stdout and python_install_result.rc != 0"
-
-- name: Ensure Python 3.8 is available for Ansible on Debian-like systems
-  hosts: debian_hosts
-  become: true
-  gather_facts: false
-  tasks:
-    - name: Install Python 3.8 and set as default on Debian (u21.local)
-      raw: |
-        # Check if python3.8 exists and if its minor version is less than 8
-        if ! command -v python3.8 &> /dev/null || [ "$(python3.8 -c 'import sys; print(sys.version_info[1])' 2>/dev/null || echo 0)" -lt 8 ]; then
-          sudo apt update -y
-          sudo apt install -y python3.8 python3-pip
-        fi
-        # Try to ensure /usr/bin/python is a symlink to python3.8
-        if [ -f /usr/bin/python3.8 ]; then
-            # Attempt to set it via update-alternatives
-            sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.8 100 --force
-            # Also create a direct symlink as a fallback
-            sudo ln -sf /usr/bin/python3.8 /usr/bin/python
-        fi
-      register: python_install_result
-      failed_when: "'0 upgraded, 0 newly installed, 0 to remove' not in python_install_result.stdout and python_install_result.rc != 0"
-
-# --- Your original plays that configure the OS, frontend, and backend ---
-# MAKE SURE THESE ARE PRESENT IN YOUR playbook.yml
 - name: Common OS Configuration
   hosts: all
   become: true
-  vars:
-    ansible_python_interpreter: /usr/bin/python3.8
   roles:
-    - common # Ensure this role exists and contains your common OS tasks (SELinux, firewalld, ufw)
+    - common
 
 - name: Configure Frontend
   hosts: frontend
   become: true
-  vars:
-    ansible_python_interpreter: /usr/bin/python3.8
   roles:
-    - frontend # Ensure this role exists and contains your Nginx installation and configuration
+    - frontend
 
 - name: Configure Backend
   hosts: backend
   become: true
-  vars:
-    ansible_python_interpreter: /usr/bin/python3.8
   roles:
-    - backend # Ensure this role exists and contains your Netdata installation and configuration
+    - backend

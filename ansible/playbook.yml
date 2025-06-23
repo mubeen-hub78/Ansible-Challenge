@@ -1,63 +1,134 @@
-# --- THESE TWO PYTHON BOOTSTRAPPING PLAYS MUST BE AT THE VERY TOP ---
+---
+# playbook.yml
 
+# Play 1: Ensure Python 3.8 is available for Ansible on RedHat-like systems
+# This play must run FIRST for RedHat hosts.
 - name: Ensure Python 3.8 is available for Ansible on RedHat-like systems
   hosts: redhat_hosts
   become: true
-  gather_facts: false # Essential: don't gather facts until Python is ready
+  gather_facts: false # Do not gather facts before Python is confirmed available
   tasks:
     - name: Install Python 3.8 and set as default on RedHat (c8.local)
       raw: |
         echo "Starting Python 3.8 installation on RedHat-like system..."
-        # ... (your verbose raw commands for RedHat, including which, ls -l, alternatives, ln -sf, python --version) ...
+        # Check if python3.8 exists and if its minor version is less than 8
+        if ! command -v python3.8 &> /dev/null || [ "$(python3.8 -c 'import sys; print(sys.version_info[1])' 2>/dev/null || echo 0)" -lt 8 ]; then
+          echo "Python 3.8 not found or too old, installing..."
+          sudo yum update -y || echo "Yum update failed, but continuing." # Added || echo for robustness
+          sudo yum install -y python38
+          echo "yum install output: $?"
+        else
+          echo "Python 3.8 already present and sufficient."
+        fi
+
+        # Verify existence and path of python3.8 after install attempt
+        echo "Verifying python3.8 path:"
+        which python3.8 || echo "python3.8 not in PATH after install"
+        ls -l /usr/bin/python3.8 || echo "/usr/bin/python3.8 does not exist after install"
+
+        # Try to ensure /usr/bin/python is a symlink to python3.8
+        if [ -f /usr/bin/python3.8 ]; then
+            echo "Attempting to set /usr/bin/python to python3.8 via alternatives and symlink..."
+            # --force is crucial to overwrite existing alternatives entry
+            sudo alternatives --install /usr/bin/python python /usr/bin/python3.8 100 --force
+            echo "alternatives --install output: $?"
+            # Create a direct symlink for robustness, in case alternatives is not immediately picked up by shell.
+            sudo ln -sf /usr/bin/python3.8 /usr/bin/python
+            echo "ln -sf output: $?"
+        else
+            echo "/usr/bin/python3.8 was not found after installation. Cannot set alternatives/symlink."
+        fi
+
+        echo "Current /usr/bin/python symlink:"
+        ls -l /usr/bin/python || echo "/usr/bin/python does not exist after symlink attempt"
+        echo "Attempting to run python --version:"
+        python --version || echo "python command failed after setup"
       register: python_install_result
+      # Only fail if installation explicitly indicates an error and it's not just "no packages to update"
       failed_when: "'No packages marked for update' not in python_install_result.stdout and python_install_result.rc != 0"
 
     - name: Debug RedHat Python install output
       debug:
         var: python_install_result.stdout_lines
-      when: python_install_result is defined # Only run if python_install_result exists
+      when: python_install_result is defined
 
 
+# Play 2: Ensure Python 3.8 is available for Ansible on Debian-like systems
+# This play must run SECOND for Debian hosts.
 - name: Ensure Python 3.8 is available for Ansible on Debian-like systems
   hosts: debian_hosts
   become: true
-  gather_facts: false # Essential: don't gather facts until Python is ready
+  gather_facts: false # Do not gather facts before Python is confirmed available
   tasks:
     - name: Install Python 3.8 and set as default on Debian (u21.local)
       raw: |
         echo "Starting Python 3.8 installation on Debian-like system..."
-        # ... (your verbose raw commands for Debian, including which, ls -l, update-alternatives, ln -sf, python --version) ...
+        # Check if python3.8 exists and if its minor version is less than 8
+        if ! command -v python3.8 &> /dev/null || [ "$(python3.8 -c 'import sys; print(sys.version_info[1])' 2>/dev/null || echo 0)" -lt 8 ]; then
+          echo "Python 3.8 not found or too old, installing..."
+          sudo apt update -y
+          sudo apt install -y python3.8 python3-pip
+          echo "apt install output: $?"
+        else
+          echo "Python 3.8 already present and sufficient."
+        fi
+
+        # Verify existence and path of python3.8 after install attempt
+        echo "Verifying python3.8 path:"
+        which python3.8 || echo "python3.8 not in PATH after install"
+        ls -l /usr/bin/python3.8 || echo "/usr/bin/python3.8 does not exist after install"
+
+        # Try to ensure /usr/bin/python is a symlink to python3.8
+        if [ -f /usr/bin/python3.8 ]; then
+            echo "Attempting to set /usr/bin/python to python3.8 via update-alternatives and symlink..."
+            # --force is crucial to overwrite existing alternatives entry
+            sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.8 100 --force
+            echo "update-alternatives --install output: $?"
+            # Create a direct symlink for robustness, in case alternatives is not immediately picked up by shell.
+            sudo ln -sf /usr/bin/python3.8 /usr/bin/python
+            echo "ln -sf output: $?"
+        else
+            echo "/usr/bin/python3.8 was not found after installation. Cannot set alternatives/symlink."
+        fi
+
+        echo "Current /usr/bin/python symlink:"
+        ls -l /usr/bin/python || echo "/usr/bin/python does not exist after symlink attempt"
+        echo "Attempting to run python --version:"
+        python --version || echo "python command failed after setup"
       register: python_install_result
+      # Only fail if installation explicitly indicates an error and it's not just "nothing to upgrade/install"
       failed_when: "'0 upgraded, 0 newly installed, 0 to remove' not in python_install_result.stdout and python_install_result.rc != 0"
 
     - name: Debug Debian Python install output
       debug:
         var: python_install_result.stdout_lines
-      when: python_install_result is defined # Only run if python_install_result exists
+      when: python_install_result is defined
 
 
-# --- ALL OTHER PLAYS (Common OS, Frontend, Backend) MUST COME AFTER THE ABOVE TWO PLAYS ---
-
+# Play 3: Common OS Configuration
+# This play will run AFTER Python is ensured on both systems.
 - name: Common OS Configuration
   hosts: all
   become: true
   vars:
-    ansible_python_interpreter: /usr/bin/python3.8 # This var is now effective
+    ansible_python_interpreter: /usr/bin/python3.8 # Now this path should be valid
   roles:
     - common
 
+# Play 4: Configure Frontend
 - name: Configure Frontend
   hosts: frontend
   become: true
   vars:
-    ansible_python_interpreter: /usr/bin/python3.8
+    ansible_python_interpreter: /usr/bin/python3.8 # Ensure the correct interpreter
   roles:
     - frontend
 
+# Play 5: Configure Backend
 - name: Configure Backend
   hosts: backend
   become: true
   vars:
-    ansible_python_interpreter: /usr/bin/python3.8
+    ansible_python_interpreter: /usr/bin/python3.8 # Ensure the correct interpreter
   roles:
     - backend

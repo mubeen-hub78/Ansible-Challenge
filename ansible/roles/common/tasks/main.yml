@@ -1,26 +1,18 @@
 ---
-# Disable SELinux only for RedHat systems excluding Amazon Linux
 - name: Disable SELinux (RedHat-like systems excluding Amazon Linux)
-  ansible.posix.selinux:
-    state: disabled
-  when:
-    - ansible_os_family == "RedHat"
-    - ansible_distribution != "Amazon"
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution'] != "Amazon"
+  command: setenforce 0
 
-# Disable firewalld only for RedHat systems excluding Amazon Linux
 - name: Disable firewalld (RedHat-like systems excluding Amazon Linux)
-  service:
+  when: ansible_facts['os_family'] == "RedHat" and ansible_facts['distribution'] != "Amazon"
+  systemd:
     name: firewalld
     state: stopped
     enabled: no
-  when:
-    - ansible_os_family == "RedHat"
-    - ansible_distribution != "Amazon"
 
-# Disable UFW only for Debian-based systems
 - name: Disable UFW (Debian-like systems)
-  service:
+  when: ansible_facts['os_family'] == "Debian"
+  systemd:
     name: ufw
     state: stopped
     enabled: no
-  when: ansible_os_family == "Debian"

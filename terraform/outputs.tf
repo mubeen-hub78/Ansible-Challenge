@@ -1,10 +1,10 @@
 output "inventory" {
   value = <<EOT
 [frontend]
-c8.local ansible_host=${aws_instance.frontend.public_ip} ansible_user=ec2-user
+c8.local ansible_host=${aws_instance.frontend.public_ip} ansible_user=ec2-user ansible_python_interpreter=/usr/bin/python3.8
 
 [backend]
-u21.local ansible_host=${aws_instance.backend.public_ip} ansible_user=ubuntu
+u21.local ansible_host=${aws_instance.backend.public_ip} ansible_user=ubuntu ansible_python_interpreter=/usr/bin/python3.8
 
 [redhat_hosts]
 c8.local

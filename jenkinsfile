@@ -40,12 +40,11 @@ pipeline {
         stage('Run Ansible Playbook') {
             steps {
                 dir('ansible') {
-                    sshagent (credentials: ['Ubuntu']) { // Use sshagent to inject key properly
-                        sh 'ansible-playbook -i inventory.ini playbook.yml'
+                    sshagent (credentials: ['Ubuntu']) { // Correct use of sshagent
+                        sh 'ansible-playbook -i inventory.ini playbook.yml --ssh-extra-args="-o StrictHostKeyChecking=no"'
                     }
                 }
             }
         }
     }
 }
-

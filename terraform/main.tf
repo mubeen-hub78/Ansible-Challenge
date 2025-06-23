@@ -1,12 +1,12 @@
-provider "aws" {
-  region = "us-east-1"
-}
+# terraform/main.tf
 
+# SSH Key Pair
 resource "aws_key_pair" "deployer_key" {
   key_name   = var.key_name
   public_key = file("~/.ssh/id_rsa.pub")
 }
 
+# Security Group
 resource "aws_security_group" "web_sg" {
   name_prefix = "ansible-challenge-sg-"
   description = "Allow HTTP, SSH, and Netdata traffic for Ansible Challenge"
@@ -40,6 +40,7 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
+# Frontend VM (Amazon Linux 2)
 resource "aws_instance" "frontend" {
   ami           = "ami-0f3f13f145e66a0a3"
   instance_type = "t2.micro"
@@ -56,6 +57,7 @@ resource "aws_instance" "frontend" {
               EOF
 }
 
+# Backend VM (Ubuntu 24.04 LTS)
 resource "aws_instance" "backend" {
   ami           = "ami-020cba7c55df1f615"
   instance_type = "t2.micro"

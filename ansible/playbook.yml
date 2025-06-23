@@ -1,6 +1,18 @@
 - name: Common OS Configuration
   hosts: all
   become: true
+  pre_tasks:
+    - name: Install Python 3.8 on Amazon Linux 2
+      when: ansible_facts['distribution'] == "Amazon"
+      yum:
+        name: python38
+        state: present
+
+    - name: Set Python 3.8 as default interpreter on Amazon Linux 2
+      when: ansible_facts['distribution'] == "Amazon"
+      set_fact:
+        ansible_python_interpreter: /usr/bin/python3.8
+
   roles:
     - common
 

@@ -1,27 +1,18 @@
-- name: Install Python 3.8 on Amazon Linux
-  yum:
-    name: python38
-    state: present
-  when: ansible_os_family == "RedHat"
+# ansible/roles/common/tasks/main.yml
 
-- name: Set Python 3.8 as default interpreter for Amazon Linux
-  set_fact:
-    ansible_python_interpreter: /usr/bin/python3.8
-  when: ansible_os_family == "RedHat"
-
-- name: Disable SELinux
+- name: Disable SELinux (RedHat-like systems)
   selinux:
     state: disabled
   when: ansible_os_family == "RedHat"
 
-- name: Disable firewalld
+- name: Disable firewalld (RedHat-like systems)
   service:
     name: firewalld
     state: stopped
     enabled: no
   when: ansible_os_family == "RedHat"
 
-- name: Disable UFW (for Ubuntu)
+- name: Disable UFW (Debian-like systems)
   service:
     name: ufw
     state: stopped

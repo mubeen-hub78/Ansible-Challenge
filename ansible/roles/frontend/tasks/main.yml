@@ -1,16 +1,14 @@
 ---
 - name: Enable nginx using amazon-linux-extras
-  command: amazon-linux-extras enable nginx1
+  shell: amazon-linux-extras enable nginx1
 
 - name: Clean yum metadata
-  command: yum clean metadata
+  shell: yum clean metadata
 
-- name: Install Nginx on Amazon Linux 2
-  yum:
-    name: nginx
-    state: present
+- name: Install Nginx using shell command
+  shell: yum install -y nginx
 
-- name: Start and enable nginx
+- name: Start and enable Nginx
   systemd:
     name: nginx
     state: started

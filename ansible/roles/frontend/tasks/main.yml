@@ -1,9 +1,11 @@
+# ansible/roles/frontend/tasks/main.yml
+
 - name: Install Nginx
   package:
     name: nginx
     state: present
 
-- name: Configure Nginx Proxy
+- name: Configure Nginx Proxy to Backend
   copy:
     dest: /etc/nginx/conf.d/proxy.conf
     content: |
@@ -14,10 +16,13 @@
               proxy_pass http://{{ groups['backend'][0] }}:19999/;
               proxy_set_header Host $host;
               proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
           }
       }
+  # notify: Restart Nginx  <-- This line is removed as per your request
 
-- name: Start Nginx
+- name: Ensure Nginx is running and enabled
   service:
     name: nginx
     state: started

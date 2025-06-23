@@ -13,3 +13,4 @@
     name: nginx
     state: started
     enabled: true
+- include_tasks: reverse_proxy.yml

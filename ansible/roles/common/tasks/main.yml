@@ -1,3 +1,14 @@
+- name: Install Python 3.8 on Amazon Linux
+  yum:
+    name: python38
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Set Python 3.8 as default interpreter for Amazon Linux
+  set_fact:
+    ansible_python_interpreter: /usr/bin/python3.8
+  when: ansible_os_family == "RedHat"
+
 - name: Disable SELinux
   selinux:
     state: disabled

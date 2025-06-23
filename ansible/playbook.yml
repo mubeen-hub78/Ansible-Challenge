@@ -1,0 +1,17 @@
+- name: Common OS Configuration
+  hosts: all
+  become: true
+  roles:
+    - common
+
+- name: Configure Frontend
+  hosts: frontend
+  become: true
+  roles:
+    - frontend
+
+- name: Configure Backend
+  hosts: backend
+  become: true
+  roles:
+    - backend

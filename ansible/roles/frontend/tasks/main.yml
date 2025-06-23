@@ -1,0 +1,24 @@
+- name: Install Nginx
+  package:
+    name: nginx
+    state: present
+
+- name: Configure Nginx Proxy
+  copy:
+    dest: /etc/nginx/conf.d/proxy.conf
+    content: |
+      server {
+          listen 80;
+
+          location / {
+              proxy_pass http://{{ groups['backend'][0] }}:19999/;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+          }
+      }
+
+- name: Start Nginx
+  service:
+    name: nginx
+    state: started
+    enabled: yes

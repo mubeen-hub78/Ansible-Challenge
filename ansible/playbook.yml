@@ -1,30 +1,60 @@
 - name: Ensure Python 3.8 is available for Ansible on RedHat-like systems
-  hosts: all
+  hosts: redhat_hosts # Target the specific group for RedHat systems
   become: true
-  gather_facts: false # Essential: Prevents Ansible from trying to gather facts with old Python
+  gather_facts: false # Still essential here, as we don't rely on gathered facts for this initial step
   tasks:
     - name: Install Python 3.8 using raw module (if not present or too old)
       raw: |
-        if ! command -v python3.8 &> /dev/null || $(python3.8 -c "import sys; print(sys.version_info[1])") < 8; then
+        if ! command -v python3.8 &> /dev/null || [ "$(python3.8 -c 'import sys; print(sys.version_info[1])' 2>/dev/null || echo 0)" -lt 8 ]; then
           sudo yum install -y python38
         fi
         # Set python3.8 as the default alternative for python (if not already)
-        if [ -f /usr/bin/python3.8 ] && [ "$(readlink -f /usr/bin/python)" != "/usr/bin/python3.8" ]; then
+        if [ -f /usr/bin/python3.8 ] && [ "$(readlink -f /usr/bin/python 2>/dev/null || echo '')" != "/usr/bin/python3.8" ]; then
             sudo alternatives --set python /usr/bin/python3.8
         fi
-      when: ansible_os_family == "RedHat"
       register: python_install_result
-      failed_when: "'No packages marked for update' not in python_install_result.stdout" # Ignore this specific success message
-      # This task intentionally does not have changed_when as raw doesn't provide standard output on change.
+      failed_when: "'No packages marked for update' not in python_install_result.stdout and python_install_result.rc != 0" # Ignore this specific success message, and allow rc 0 for no changes
+
+- name: Ensure Python 3.8 is available for Ansible on Debian-like systems (if applicable, though not the primary issue)
+  hosts: debian_hosts # Target the specific group for Debian systems
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Install Python 3.8 on Debian using raw module (if not present or too old)
+      raw: |
+        if ! command -v python3.8 &> /dev/null || [ "$(python3.8 -c 'import sys; print(sys.version_info[1])' 2>/dev/null || echo 0)" -lt 8 ]; then
+          sudo apt update && sudo apt install -y python3.8 python3-pip
+        fi
+        # Set python3.8 as the default alternative for python (if not already)
+        if [ -f /usr/bin/python3.8 ] && [ "$(readlink -f /usr/bin/python 2>/dev/null || echo '')" != "/usr/bin/python3.8" ]; then
+            sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.8 100
+        fi
+      register: python_install_result
+      failed_when: "'0 upgraded, 0 newly installed, 0 to remove' not in python_install_result.stdout and python_install_result.rc != 0"
+
 
 # --- Your existing plays follow below ---
 
 - name: Common OS Configuration
-  hosts: all
+  hosts: all # This play now applies to all, after Python is ensured
   become: true
   vars:
     ansible_python_interpreter: /usr/bin/python3.8 # Crucial: Ensure this is set for subsequent tasks
   roles:
     - common
 
-# ... and then your Frontend and Backend plays
+- name: Configure Frontend
+  hosts: frontend
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3.8
+  roles:
+    - frontend
+
+- name: Configure Backend
+  hosts: backend
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3.8
+  roles:
+    - backend

@@ -1,4 +1,4 @@
----
+--- 
 - name: Python Bootstrapping for RedHat-like systems
   hosts: redhat_hosts
   become: true
@@ -33,3 +33,20 @@
   become: true
   roles:
     - frontend
+
+- name: Configure Netdata for Public Access
+  hosts: backend
+  become: true
+  tasks:
+    - name: Allow Netdata to listen on all IP addresses
+      lineinfile:
+        path: /etc/netdata/netdata.conf
+        regexp: '^bind to ='
+        line: 'bind to = 0.0.0.0'
+        insertafter: '^\[web\]'
+        backup: yes
+
+    - name: Restart Netdata service
+      service:
+        name: netdata
+        state: restarted

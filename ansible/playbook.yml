@@ -2,23 +2,18 @@
 # ansible/playbook.yml - Main Ansible Playbook for CI/CD Challenge
 
 # Play 1: Python Bootstrapping for RedHat-like systems (Amazon Linux 2)
-# This play ensures Python 3.8 is installed and active on c8.local.
-# It uses 'raw' as the Python interpreter might not be ready for standard modules initially.
 - name: Python Bootstrapping for RedHat-like systems
-  hosts: redhat_hosts # Target only Amazon Linux 2 (c8.local)
-  become: true        # Required for yum/amazon-linux-extras operations
-  gather_facts: false # Do not gather facts yet, as Python might not be fully configured
+  hosts: redhat_hosts
+  become: true
+  gather_facts: false
 
   tasks:
     - name: Install Python 3.8 on RedHat (c8.local) via amazon-linux-extras
       raw: |
         echo "Starting Python 3.8 installation on RedHat-like system (Amazon Linux 2 specific)..."
-        # Check if python3.8 exists and if its minor version is less than 8
         if ! command -v /usr/bin/python3.8 &> /dev/null || [ "$(/usr/bin/python3.8 -c 'import sys; print(sys.version_info[1])' 2>/dev/null || echo 0)" -lt 8 ]; then
           echo "Python 3.8 not found or too old, installing via amazon-linux-extras..."
-          # Update system first (optional, but good practice for fresh installs)
           sudo yum update -y || echo "Yum update failed, but continuing for Python install."
-          # Install Python 3.8 via amazon-linux-extras. This enables the topic and installs python38 package.
           sudo amazon-linux-extras install -y python3.8
           echo "amazon-linux-extras install output: $?"
         else
@@ -30,53 +25,45 @@
             echo "/usr/bin/python3.8 exists. All good."
         else
             echo "ERROR: /usr/bin/python3.8 was not found after installation attempt. This is critical. Exiting raw task with error."
-            exit 1 # Force an error if Python 3.8 was not installed correctly
+            exit 1
         fi
-      register: python_install_result # Capture output for debugging
-      # Fail this task if the raw command itself returned a non-zero exit code,
-      # or if our verification message indicates Python 3.8 was not found.
+      register: python_install_result
       failed_when: "python_install_result.rc != 0 or 'ERROR: /usr/bin/python3.8 was not found' in python_install_result.stdout"
 
     - name: Debug RedHat Python install output
       debug:
         var: python_install_result.stdout_lines
-      when: python_install_result is defined # Only show debug if the raw task was attempted
+      when: python_install_result is defined
 
-    # IMPORTANT: Clear facts after Python 3.8 installation. This forces Ansible
-    # to re-evaluate the Python interpreter path for subsequent plays within the
-    # same ansible-playbook run, ensuring it picks up the newly installed Python 3.8.
-    - name: Clear cached facts to force Python interpreter re-evaluation
-      meta: clear_facts
+    # ✅ SET FACT to update Python interpreter path
+    - name: Set Python 3.8 as interpreter for RedHat hosts
+      set_fact:
+        ansible_python_interpreter: /usr/bin/python3.8
+
+    # ✅ RESET SSH CONNECTION to apply the new interpreter
+    - name: Reset SSH connection to apply new interpreter
+      meta: reset_connection
 
 # Play 2: Common OS Configuration for All VMs
-# This play and subsequent ones will run AFTER Python 3.8 is ensured on RedHat hosts,
-# and Python 3.x is already available on Debian hosts.
-# Ansible will now use /usr/bin/python3.8 on RedHat and /usr/bin/python3 on Debian.
 - name: Common OS Configuration
   hosts: all
   become: true
-  # Explicitly set python interpreter for all hosts. This variable is effective
-  # for this play and all subsequent plays.
-  vars:
-    ansible_python_interpreter: /usr/bin/python3 # Use /usr/bin/python3 for consistency
 
   roles:
-    - common # This references the role in ansible/roles/common
+    - common
 
 # Play 3: Configure Frontend Servers (Nginx)
 - name: Configure Frontend
   hosts: frontend
   become: true
-  vars:
-    ansible_python_interpreter: /usr/bin/python3 # Will now use Python 3.8 on c8.local
+
   roles:
-    - frontend # This references the role in ansible/roles/frontend
+    - frontend
 
 # Play 4: Configure Backend Servers (Netdata)
 - name: Configure Backend
   hosts: backend
   become: true
-  vars:
-    ansible_python_interpreter: /usr/bin/python3 # Will use Python 3.12+ on u21.local
+
   roles:
-    - backend # This references the role in ansible/roles/backend
+    - backend

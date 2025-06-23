@@ -1,8 +1,3 @@
-Okay, here is the complete, fully updated `playbook.yml` with all the latest fixes for Python 3.8 installation on both Amazon Linux 2 (RedHat-like) and Ubuntu 24.04 (Debian-like).
-
-**Make sure you have also correctly set `ansible_python_interpreter=/usr/bin/python3.8` for both hosts in your Terraform `outputs.tf` file.**
-
-```yaml
 ---
 # playbook.yml - Complete Ansible Playbook for Ansible Challenge
 

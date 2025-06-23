@@ -1,26 +1,28 @@
-# ansible/roles/backend/tasks/main.yml
-
-- name: Install Netdata (Debian/Ubuntu)
+---
+# Install Netdata on Debian-based systems
+- name: Install Netdata on Debian/Ubuntu
   apt:
     name: netdata
     state: present
     update_cache: yes
   when: ansible_os_family == "Debian"
 
-- name: Install Netdata (RedHat/Amazon Linux)
+# Install Netdata on RedHat-based systems (Amazon Linux 2 / CentOS)
+- name: Install Netdata on RedHat/Amazon Linux
   yum:
     name: netdata
     state: present
-  when: ansible_os_family == "RedHat"
+  when: ansible_distribution in ["Amazon", "CentOS", "RedHat"]
 
+# Configure Netdata to listen on all interfaces (port 19999)
 - name: Configure Netdata to listen on all interfaces (port 19999)
   lineinfile:
     path: /etc/netdata/netdata.conf
     regexp: '^\s*#?\s*bind to = 127.0.0.1'
     line: '  bind to = 0.0.0.0'
     backup: yes
-  # notify: Restart Netdata  <-- This line is removed as per your request
 
+# Ensure Netdata is running and enabled
 - name: Ensure Netdata is running and enabled
   service:
     name: netdata

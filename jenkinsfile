@@ -1,1 +1,51 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_ACCESS_KEY_ID = credentials('AWS-ROOT')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS-ROOT')
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git branch: 'main', url: 'https://github.com/mubeen-hub78/Ansible-Challenge.git'
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Generate Ansible Inventory') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform output -raw inventory > ../ansible/inventory.ini'
+                }
+            }
+        }
+
+        stage('Run Ansible Playbook') {
+            steps {
+                dir('ansible') {
+                    sshagent (credentials: ['Ubuntu']) { // Use sshagent to inject key properly
+                        sh 'ansible-playbook -i inventory.ini playbook.yml'
+                    }
+                }
+            }
+        }
+    }
+}
 

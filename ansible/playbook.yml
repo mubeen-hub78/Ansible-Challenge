@@ -1,17 +1,63 @@
+# --- THESE TWO PYTHON BOOTSTRAPPING PLAYS MUST BE AT THE VERY TOP ---
+
+- name: Ensure Python 3.8 is available for Ansible on RedHat-like systems
+  hosts: redhat_hosts
+  become: true
+  gather_facts: false # Essential: don't gather facts until Python is ready
+  tasks:
+    - name: Install Python 3.8 and set as default on RedHat (c8.local)
+      raw: |
+        echo "Starting Python 3.8 installation on RedHat-like system..."
+        # ... (your verbose raw commands for RedHat, including which, ls -l, alternatives, ln -sf, python --version) ...
+      register: python_install_result
+      failed_when: "'No packages marked for update' not in python_install_result.stdout and python_install_result.rc != 0"
+
+    - name: Debug RedHat Python install output
+      debug:
+        var: python_install_result.stdout_lines
+      when: python_install_result is defined # Only run if python_install_result exists
+
+
+- name: Ensure Python 3.8 is available for Ansible on Debian-like systems
+  hosts: debian_hosts
+  become: true
+  gather_facts: false # Essential: don't gather facts until Python is ready
+  tasks:
+    - name: Install Python 3.8 and set as default on Debian (u21.local)
+      raw: |
+        echo "Starting Python 3.8 installation on Debian-like system..."
+        # ... (your verbose raw commands for Debian, including which, ls -l, update-alternatives, ln -sf, python --version) ...
+      register: python_install_result
+      failed_when: "'0 upgraded, 0 newly installed, 0 to remove' not in python_install_result.stdout and python_install_result.rc != 0"
+
+    - name: Debug Debian Python install output
+      debug:
+        var: python_install_result.stdout_lines
+      when: python_install_result is defined # Only run if python_install_result exists
+
+
+# --- ALL OTHER PLAYS (Common OS, Frontend, Backend) MUST COME AFTER THE ABOVE TWO PLAYS ---
+
 - name: Common OS Configuration
   hosts: all
   become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3.8 # This var is now effective
   roles:
     - common
 
 - name: Configure Frontend
   hosts: frontend
   become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3.8
   roles:
     - frontend
 
 - name: Configure Backend
   hosts: backend
   become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3.8
   roles:
     - backend

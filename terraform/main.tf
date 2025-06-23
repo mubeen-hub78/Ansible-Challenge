@@ -3,6 +3,7 @@ resource "aws_instance" "frontend" {
   instance_type = "t2.micro"
   key_name      = var.key_name
   subnet_id     = var.subnet_id
+  vpc_security_group_ids = ["sg-05a7015767640bf35"] # Security Group added
   tags = {
     Name = "c8.local"
   }
@@ -18,6 +19,7 @@ resource "aws_instance" "backend" {
   instance_type = "t2.micro"
   key_name      = var.key_name
   subnet_id     = var.subnet_id
+  vpc_security_group_ids = ["sg-05a7015767640bf35"] # Security Group added
   tags = {
     Name = "u21.local"
   }

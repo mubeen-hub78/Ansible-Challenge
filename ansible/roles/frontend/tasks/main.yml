@@ -1,10 +1,20 @@
-# ansible/roles/frontend/tasks/main.yml
-
-- name: Install Nginx
-  package:
+---
+# Install Nginx on Amazon Linux 2
+- name: Install Nginx on Amazon Linux 2
+  yum:
     name: nginx
     state: present
+  when: ansible_distribution == "Amazon"
 
+# Install Nginx on Debian-based systems
+- name: Install Nginx on Debian-based systems
+  apt:
+    name: nginx
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+# Configure Nginx Proxy to Backend
 - name: Configure Nginx Proxy to Backend
   copy:
     dest: /etc/nginx/conf.d/proxy.conf
@@ -20,8 +30,8 @@
               proxy_set_header X-Forwarded-Proto $scheme;
           }
       }
-  # notify: Restart Nginx  <-- This line is removed as per your request
 
+# Ensure Nginx is running and enabled
 - name: Ensure Nginx is running and enabled
   service:
     name: nginx

@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        AWS_ACCESS_KEY_ID = credentials('AWS-ROOT')
+        AWS_ACCESS_KEY_ID = credentials('AWS-ROOT') # Ensure 'AWS-ROOT' is the correct ID for your AWS credentials in Jenkins
         AWS_SECRET_ACCESS_KEY = credentials('AWS-ROOT')
     }
 
@@ -32,6 +32,7 @@ pipeline {
         stage('Generate Ansible Inventory') {
             steps {
                 dir('terraform') {
+                    # This command creates the inventory.ini file in the ansible directory
                     sh 'terraform output -raw inventory > ../ansible/inventory.ini'
                 }
             }
@@ -40,20 +41,12 @@ pipeline {
         stage('Run Ansible Playbook') {
             steps {
                 dir('ansible') {
-                    sshagent (credentials: ['Ubuntu']) { // Ensure this is the correct ID for your SSH key credential
+                    sshagent (credentials: ['ubuntu']) { // Ensure 'ubuntu' is the correct ID for your SSH private key credential in Jenkins
                         sh '''
-                        # First, run ONLY the Python bootstrapping play on RedHat hosts
-                        ansible-playbook -i inventory.ini playbook.yml \\
-                                         --limit redhat_hosts \\
-                                         --tags "python_bootstrap" \\
-                                         --ssh-extra-args="-o StrictHostKeyChecking=no"
-
-                        # Now, run the rest of the playbook on all hosts.
-                        # Ansible will now correctly pick up Python 3.8 on c8.local
-                        # and Python 3.12 on u21.local (via /usr/bin/python3)
-                        ansible-playbook -i inventory.ini playbook.yml \\
-                                         --skip-tags "python_bootstrap" \\
-                                         --ssh-extra-args="-o StrictHostKeyChecking=no"
+                        # Run the entire unified playbook.yml in a single command.
+                        # The Python bootstrapping play for RedHat will run first,
+                        # then meta: clear_facts will force Ansible to re-evaluate the interpreter.
+                        ansible-playbook -i inventory.ini playbook.yml --ssh-extra-args="-o StrictHostKeyChecking=no"
                         '''
                     }
                 }

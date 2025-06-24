@@ -1,14 +1,30 @@
-- name: Add reverse proxy config for Netdata
+- name: Configure Nginx with HTTP and TCP proxy for Netdata
   copy:
-    dest: /etc/nginx/conf.d/netdata_proxy.conf
+    dest: /etc/nginx/nginx.conf
     content: |
-      server {
-          listen 80;
+      worker_processes auto;
 
-          location / {
-              proxy_pass http://{{ hostvars['u21.local']['ansible_host'] }}:19999;
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
+      events { worker_connections 1024; }
+
+      http {
+          server {
+              listen 80;
+
+              location / {
+                  root /usr/share/nginx/html;
+                  index index.html index.htm;
+              }
+          }
+      }
+
+      stream {
+          upstream netdata_backend {
+              server {{ hostvars['backend1']['ansible_host'] }}:19999;
+          }
+
+          server {
+              listen 19999;
+              proxy_pass netdata_backend;
           }
       }
   notify: restart nginx

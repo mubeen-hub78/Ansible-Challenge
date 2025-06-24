@@ -1,14 +1,13 @@
 ---
 - name: Python Bootstrapping for RedHat-like systems
   hosts: redhat_hosts
-  become: true
-  gather_facts: no
+  become: yes
   tasks:
-    - name: Install Python 3.8 on RedHat (c8.local) via amazon-linux-extras
-      raw: |
-        sudo amazon-linux-extras enable python3.8
-        sudo yum clean metadata
-        sudo yum install -y python3.8
+    - name: Install Python 3.8 on RedHat (Amazon Linux 2)
+      shell: |
+        amazon-linux-extras enable python3.8
+        yum clean metadata
+        yum install -y python38
       register: python_install_result
 
     - name: Debug RedHat Python install output
@@ -24,18 +23,18 @@
 
 - name: Common OS Configuration
   hosts: all
-  become: true
+  become: yes
   roles:
     - common
 
 - name: Configure Frontend
   hosts: frontend
-  become: true
+  become: yes
   roles:
     - frontend
 
 - name: Configure Backend (Netdata)
   hosts: backend
-  become: true
+  become: yes
   roles:
     - backend

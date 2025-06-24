@@ -34,21 +34,8 @@
   roles:
     - frontend
 
-- name: Configure Netdata for Public Access
+- name: Configure Backend (Netdata)
   hosts: backend
   become: true
-  tasks:
-    - name: Ensure Netdata binds to all IP addresses
-      blockinfile:
-        path: /etc/netdata/netdata.conf
-        block: |
-          [web]
-            bind to = 0.0.0.0
-        marker: ""
-        insertafter: EOF
-        backup: yes
-
-    - name: Restart Netdata service
-      service:
-        name: netdata
-        state: restarted
+  roles:
+    - backend

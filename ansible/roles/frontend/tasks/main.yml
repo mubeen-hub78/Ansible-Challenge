@@ -1,17 +1,20 @@
-- name: Configure NGINX as a reverse proxy for Netdata
-  copy:
-    dest: /etc/nginx/conf.d/reverseproxy.conf
-    content: |
-      server {
-          listen 19999;
+---
+- name: Install NGINX
+  become: yes
+  ansible.builtin.yum:
+    name: nginx
+    state: present
 
-          location / {
-              proxy_pass http://{{ hostvars['u21.local']['ansible_host'] }}:19999/;
-              proxy_set_header Host $host;
-              proxy_set_header X-Real-IP $remote_addr;
-              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              proxy_http_version 1.1;
-              proxy_buffering off;
-          }
-      }
-  notify: restart nginx
+- name: Start and enable NGINX
+  become: yes
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Configure NGINX as reverse proxy for Netdata
+  become: yes
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+  notify: Restart NGINX

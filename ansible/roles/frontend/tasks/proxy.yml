@@ -1,4 +1,4 @@
-- name: Configure Nginx with HTTP and TCP proxy for Netdata
+- name: Configure Nginx HTTP config
   copy:
     dest: /etc/nginx/nginx.conf
     content: |
@@ -17,9 +17,22 @@
           }
       }
 
+      include /etc/nginx/conf.d/*.conf;
+  notify: restart nginx
+
+- name: Create stream configuration directory
+  file:
+    path: /etc/nginx/conf.d
+    state: directory
+    mode: '0755'
+
+- name: Configure Nginx TCP proxy for Netdata
+  copy:
+    dest: /etc/nginx/conf.d/stream.conf
+    content: |
       stream {
           upstream netdata_backend {
-              server {{ hostvars[groups['backend'][0]].ansible_host }}:19999;
+              server {{ hostvars['u21.local']['ansible_host'] }}:19999;
           }
 
           server {

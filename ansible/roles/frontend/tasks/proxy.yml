@@ -1,21 +1,18 @@
-- name: Configure Nginx HTTP config
-  copy:
-    dest: /etc/nginx/nginx.conf
-    content: |
-      worker_processes auto;
+---
+- name: Configure NGINX as a reverse proxy for Netdata
+  blockinfile:
+    path: /etc/nginx/nginx.conf
+    block: |
+      stream {
+          upstream netdata_backend {
+              server {{ hostvars['u21.local'].ansible_host }}:19999;
+          }
 
-      events { worker_connections 1024; }
-
-      http {
           server {
-              listen 80;
-
-              location / {
-                  root /usr/share/nginx/html;
-                  index index.html index.htm;
-              }
+              listen 19999;
+              proxy_pass netdata_backend;
           }
       }
-
-      include /etc/nginx/conf.d/*.conf;
+    insertafter: EOF
+    backup: yes
   notify: restart nginx

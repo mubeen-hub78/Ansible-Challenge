@@ -1,5 +1,19 @@
-- name: restart nginx
+- name: Validate nginx configuration
+  command: nginx -t
+  register: nginx_test
+  ignore_errors: yes
+
+- name: Debug nginx configuration test result
+  debug:
+    var: nginx_test.stdout_lines
+
+- name: Fail the play if nginx config is invalid
+  fail:
+    msg: "NGINX configuration is invalid. Check syntax errors."
+  when: nginx_test.rc != 0
+
+- name: Restart nginx
   service:
     name: nginx
     state: restarted
-
+  when: nginx_test.rc == 0

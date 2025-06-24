@@ -1,4 +1,4 @@
-- name: Configure Nginx HTTP config for frontend and Netdata reverse proxy
+- name: Configure Nginx HTTP config
   copy:
     dest: /etc/nginx/nginx.conf
     content: |
@@ -15,22 +15,7 @@
                   index index.html index.htm;
               }
           }
-
-          server {
-              listen 19999;
-
-              location / {
-                  proxy_pass http://{{ hostvars['u21.local']['ansible_host'] }}:19999/;
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_http_version 1.1;
-                  proxy_set_header Connection '';
-                  proxy_buffering off;
-                  proxy_request_buffering off;
-              }
-          }
       }
 
       include /etc/nginx/conf.d/*.conf;
   notify: restart nginx
-

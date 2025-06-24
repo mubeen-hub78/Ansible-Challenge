@@ -19,7 +19,7 @@
 
       stream {
           upstream netdata_backend {
-              server {{ hostvars['backend1']['ansible_host'] }}:19999;
+              server {{ hostvars[groups['backend'][0]].ansible_host }}:19999;
           }
 
           server {

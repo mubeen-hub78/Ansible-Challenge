@@ -1,18 +1,21 @@
----
-- name: Configure NGINX as a reverse proxy for Netdata
-  blockinfile:
-    path: /etc/nginx/nginx.conf
-    block: |
-      stream {
-          upstream netdata_backend {
-              server {{ hostvars['u21.local'].ansible_host }}:19999;
-          }
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
 
-          server {
-              listen 19999;
-              proxy_pass netdata_backend;
-          }
-      }
-    insertafter: EOF
-    backup: yes
-  notify: restart nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    server {
+        listen 80;
+        server_name _;
+
+        location / {
+            proxy_pass http://{{ hostvars['u21.local']['ansible_host'] }}:19999/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+}

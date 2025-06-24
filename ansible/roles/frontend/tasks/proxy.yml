@@ -34,8 +34,3 @@
       include /etc/nginx/conf.d/*.conf;
   notify: restart nginx
 
-- name: Create stream configuration directory (optional)
-  file:
-    path: /etc/nginx/conf.d
-    state: directory
-    mode: '0755'
